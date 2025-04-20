@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Attendance System</title>
+    <style>
+        body { font-family: Arial; background: #f2f2f2; text-align: center; padding: 20px; }
+        video, canvas, img { margin-top: 20px; border-radius: 10px; width: 90%; max-width: 400px; }
+        button, a { margin-top: 10px; padding: 10px 20px; background: #007bff; color: white; border: none;
+            border-radius: 8px; cursor: pointer; display: inline-block; text-decoration: none; }
+        button:hover, a:hover { background: #0056b3; }
+        ul { list-style: none; padding: 0; }
+        li { background: #fff; padding: 10px; margin: 5px auto; border-radius: 5px; width: 60%; }
+    </style>
+</head>
+<body>
+    <h1>📸 Smart Attendance System</h1>
+
+    <video id="video" autoplay></video>
+    <canvas id="canvas" style="display:none;"></canvas>
+
+    <button onclick="capture()">✅ Capture & Mark Attendance</button>
+    <button onclick="addStudent()">➕ Add New Student</button>
+    <a href="/download">📥 Download Attendance</a>
+    <a href="/clear" onclick="return confirm('Clear all records?')">🧹 Clear Attendance</a>
+    <a href="/logout">🚪 Logout</a>
+
+    <img id="preview" src="">
+
+    {% if message %}
+        <h3>{{ message }}</h3>
+    {% endif %}
+
+    {% if students %}
+        <h3>Present Students:</h3>
+        <ul>
+            {% for student in students %}
+                <li>{{ student }}</li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+
+        navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+            .then(stream => { video.srcObject = stream; });
+
+        function capture() {
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.toBlob(blob => {
+                const file = new File([blob], "captured.jpg", { type: "image/jpeg" });
+                const formData = new FormData();
+                formData.append("image", file);
+                fetch("/upload", { method: "POST", body: formData })
+                    .then(res => res.text())
+                    .then(html => { document.open(); document.write(html); document.close(); });
+            }, "image/jpeg");
+        }
+
+        function addStudent() {
+            let studentName = prompt("Enter student name:");
+            if (!studentName) return alert("Name is required!");
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            canvas.toBlob(blob => {
+                const file = new File([blob], `${studentName}.jpg`, { type: "image/jpeg" });
+                const formData = new FormData();
+                formData.append("image", file);
+                formData.append("name", studentName);
+                fetch("/add_student", { method: "POST", body: formData })
+                    .then(res => res.text()).then(alert);
+            }, "image/jpeg");
+        }
+    </script>
+</body>
+</html>
